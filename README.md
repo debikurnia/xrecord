@@ -103,14 +103,12 @@ xrecord render recording-xxxx --zoom 2.2 --background solid:101216 --cursor-scal
 
 ## How it works
 
-```
-RECORD                                      RENDER
-ScreenCaptureKit -> raw.mov (HEVC)          read frames at a constant 60 fps
-CGEventTap       -> metadata.json     -->   apply zoom, look, and cursor      --> output.mp4
-  (cursor track + clicks)                   add ripple and motion blur (Core Image)
-
-                         ZoomPlanner: clicks -> zoom timeline (pure, unit-tested)
-```
+| Stage | What happens | Output |
+|-------|--------------|--------|
+| Capture | ScreenCaptureKit records the screen | `raw.mov` (HEVC) |
+| Track | CGEventTap logs the cursor track and clicks | `metadata.json` |
+| Plan | ZoomPlanner turns clicks into a zoom timeline (pure, unit-tested) | zoom timeline |
+| Render | Core Image applies zoom, look, cursor, ripple, and motion blur at a constant 60 fps | `output.mp4` |
 
 Recording is offline-first: capture writes raw frames plus a metadata sidecar,
 and the renderer replays them at a steady frame rate. The cursor and zoom stay
