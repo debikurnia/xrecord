@@ -110,6 +110,7 @@ final class RecordRunner {
             sessionEnd: stopTime,
             rawCursor: raw.cursor,
             rawClicks: raw.clicks,
+            rawKeys: raw.keys,
             cursorBaked: info.cursorBaked
         )
 

@@ -80,3 +80,41 @@ public struct CursorSmoother: Sendable {
         return result
     }
 }
+
+/// Opacity of the drawn cursor at time `t`, emulating macOS: the cursor is fully
+/// visible while there is recent activity, fades out after `idleDelay` seconds of
+/// no activity, and pops back instantly when activity resumes.
+///
+/// `activityTimes` must be sorted ascending. It typically holds the timestamps of
+/// cursor-movement samples plus clicks (movement only is recorded when the mouse
+/// actually moves, so the gaps between samples mark idle periods).
+public func cursorIdleAlpha(
+    at t: Double,
+    activityTimes: [Double],
+    idleDelay: Double = 0.6,
+    fadeDuration: Double = 0.35
+) -> Double {
+    guard !activityTimes.isEmpty else { return 0 }
+
+    // Rightmost activity time <= t.
+    var lo = 0
+    var hi = activityTimes.count - 1
+    var idx = -1
+    while lo <= hi {
+        let mid = (lo + hi) / 2
+        if activityTimes[mid] <= t {
+            idx = mid
+            lo = mid + 1
+        } else {
+            hi = mid - 1
+        }
+    }
+    guard idx >= 0 else { return 0 } // before any activity: hidden until first move
+
+    let dtSince = t - activityTimes[idx]
+    if dtSince <= idleDelay { return 1 }
+    if fadeDuration <= 0 { return 0 }
+    let alpha = 1 - (dtSince - idleDelay) / fadeDuration
+    return min(1, max(0, alpha))
+}
+

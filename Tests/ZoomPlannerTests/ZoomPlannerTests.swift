@@ -206,4 +206,40 @@ private func close(_ a: Double, _ b: Double, _ tol: Double = 1e-9) -> Bool {
         #expect(close(Easing.easeInOutCubic(-1), 0))
         #expect(close(Easing.easeInOutCubic(2), 1))
     }
+
+    // MARK: - Activity (typing) zoom
+
+    @Test func typingAloneCreatesZoomSegment() {
+        let keys = [
+            KeyEvent(t: 2.0, position: Point(x: 800, y: 400)),
+            KeyEvent(t: 2.3, position: Point(x: 800, y: 400)),
+            KeyEvent(t: 2.6, position: Point(x: 800, y: 400)),
+        ]
+        let timeline = makePlanner().plan(clicks: [], cursor: [], keys: keys, screen: screen, duration: 10)
+        #expect(timeline.segments.count == 1)
+        let hold = timeline.state(at: 2.4)
+        #expect(close(hold.scale, 1.8))
+        #expect(close(hold.center.x, 800, 1e-6))
+        #expect(close(hold.center.y, 400, 1e-6))
+    }
+
+    @Test func typingMergesWithNearbyClickIntoOneSegment() {
+        let clicks = [ClickEvent(t: 2.0, position: Point(x: 600, y: 500))]
+        let keys = [
+            KeyEvent(t: 2.5, position: Point(x: 620, y: 500)),
+            KeyEvent(t: 3.0, position: Point(x: 620, y: 500)),
+        ]
+        let timeline = makePlanner().plan(clicks: clicks, cursor: [], keys: keys, screen: screen, duration: 10)
+        #expect(timeline.segments.count == 1)
+        // Still zoomed while typing continues after the click.
+        #expect(close(timeline.state(at: 2.8).scale, 1.8))
+    }
+
+    @Test func emptyKeysMatchClicksOnlyBehavior() {
+        let clicks = [ClickEvent(t: 2.0, position: Point(x: 1000, y: 500))]
+        let a = makePlanner().plan(clicks: clicks, cursor: [], screen: screen, duration: 10)
+        let b = makePlanner().plan(clicks: clicks, cursor: [], keys: [], screen: screen, duration: 10)
+        #expect(a.segments.count == b.segments.count)
+        #expect(close(a.state(at: 2.5).scale, b.state(at: 2.5).scale))
+    }
 }

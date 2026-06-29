@@ -66,6 +66,10 @@ public struct LookConfig: Sendable {
     public var shadowOffset: Double
     /// Size multiplier for the rendered cursor (relative to its base size).
     public var cursorScale: Double
+    /// When true, the cursor fades out while the mouse is idle (macOS-like).
+    public var cursorHide: Bool
+    /// Seconds of no mouse activity before the cursor starts fading out.
+    public var cursorHideDelay: Double
     /// Whether to draw an expanding ripple at each click.
     public var clickEffect: Bool
     /// Motion-blur strength during fast zoom/pan (0 = off).
@@ -79,6 +83,8 @@ public struct LookConfig: Sendable {
         shadowRadius: Double,
         shadowOffset: Double,
         cursorScale: Double = 1.5,
+        cursorHide: Bool = true,
+        cursorHideDelay: Double = 0.6,
         clickEffect: Bool = true,
         motionBlur: Double = 0.5
     ) {
@@ -89,6 +95,8 @@ public struct LookConfig: Sendable {
         self.shadowRadius = shadowRadius
         self.shadowOffset = shadowOffset
         self.cursorScale = cursorScale
+        self.cursorHide = cursorHide
+        self.cursorHideDelay = cursorHideDelay
         self.clickEffect = clickEffect
         self.motionBlur = motionBlur
     }

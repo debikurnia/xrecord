@@ -64,11 +64,16 @@ public struct ZoomPlanner {
     public func plan(
         clicks: [ClickEvent],
         cursor: [CursorSample],
+        keys: [KeyEvent] = [],
         screen: ScreenSize,
         duration: Double
     ) -> ZoomTimeline {
-        let sortedClicks = clicks.sorted { $0.t < $1.t }
-        let clusters = clusterByTime(sortedClicks)
+        // Clicks and keypresses are both "activity": each can trigger or sustain
+        // a zoom. Typing keeps the zoom engaged near the cursor's location.
+        var events: [ActivityEvent] = clicks.map { ActivityEvent(t: $0.t, position: $0.position) }
+        events += keys.map { ActivityEvent(t: $0.t, position: $0.position) }
+        let sorted = events.sorted { $0.t < $1.t }
+        let clusters = clusterByTime(sorted)
         var segments = clusters.map {
             makeSegment(cluster: $0, cursor: cursor, screen: screen, duration: duration)
         }
@@ -76,15 +81,21 @@ public struct ZoomPlanner {
         return ZoomTimeline(segments: segments, screen: screen, baseScale: 1.0)
     }
 
+    /// A click or keypress, reduced to a time and a screen location.
+    private struct ActivityEvent {
+        var t: Double
+        var position: Point
+    }
+
     // MARK: - Step 1: clustering
 
-    private func clusterByTime(_ sortedClicks: [ClickEvent]) -> [[ClickEvent]] {
-        var clusters: [[ClickEvent]] = []
-        for click in sortedClicks {
-            if let prev = clusters.last?.last, click.t - prev.t <= config.clusterTimeGap {
-                clusters[clusters.count - 1].append(click)
+    private func clusterByTime(_ sorted: [ActivityEvent]) -> [[ActivityEvent]] {
+        var clusters: [[ActivityEvent]] = []
+        for event in sorted {
+            if let prev = clusters.last?.last, event.t - prev.t <= config.clusterTimeGap {
+                clusters[clusters.count - 1].append(event)
             } else {
-                clusters.append([click])
+                clusters.append([event])
             }
         }
         return clusters
@@ -93,7 +104,7 @@ public struct ZoomPlanner {
     // MARK: - Step 2: segment generation
 
     private func makeSegment(
-        cluster: [ClickEvent],
+        cluster: [ActivityEvent],
         cursor: [CursorSample],
         screen: ScreenSize,
         duration: Double
@@ -138,7 +149,7 @@ public struct ZoomPlanner {
     }
 
     private func buildFocusPath(
-        cluster: [ClickEvent],
+        cluster: [ActivityEvent],
         cursor: [CursorSample],
         startTime: Double,
         holdEnd: Double,

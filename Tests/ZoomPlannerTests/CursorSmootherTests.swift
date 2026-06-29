@@ -90,4 +90,36 @@ private func close(_ a: Double, _ b: Double, _ tol: Double = 1e-6) -> Bool {
         ])
         #expect(close(cursor.position(at: 1.5)!.x, 50))
     }
+
+    // MARK: - Idle auto-hide alpha
+
+    @Test func idleAlphaVisibleDuringActivity() {
+        let times = [1.0, 1.05, 1.1, 1.15]
+        // Right on/after a recent sample → fully visible.
+        #expect(close(cursorIdleAlpha(at: 1.1, activityTimes: times), 1.0))
+        // Within the grace delay after the last sample → still visible.
+        #expect(close(cursorIdleAlpha(at: 1.15 + 0.5, activityTimes: times, idleDelay: 0.6, fadeDuration: 0.35), 1.0))
+    }
+
+    @Test func idleAlphaFadesOutAfterDelay() {
+        let times = [1.0]
+        // Past the delay, partway through the fade.
+        let mid = cursorIdleAlpha(at: 1.0 + 0.6 + 0.175, activityTimes: times, idleDelay: 0.6, fadeDuration: 0.35)
+        #expect(mid > 0.3 && mid < 0.7)
+        // Well past the fade → hidden.
+        #expect(close(cursorIdleAlpha(at: 1.0 + 0.6 + 0.35 + 1.0, activityTimes: times, idleDelay: 0.6, fadeDuration: 0.35), 0.0))
+    }
+
+    @Test func idleAlphaPopsBackOnNewActivity() {
+        let times = [1.0, 5.0] // long idle gap, then movement resumes at 5.0
+        // Deep in the gap → hidden.
+        #expect(close(cursorIdleAlpha(at: 3.0, activityTimes: times), 0.0))
+        // Exactly when activity resumes → instantly visible.
+        #expect(close(cursorIdleAlpha(at: 5.0, activityTimes: times), 1.0))
+    }
+
+    @Test func idleAlphaHiddenBeforeFirstActivityAndWhenEmpty() {
+        #expect(close(cursorIdleAlpha(at: 0.0, activityTimes: [2.0]), 0.0))
+        #expect(close(cursorIdleAlpha(at: 1.0, activityTimes: []), 0.0))
+    }
 }

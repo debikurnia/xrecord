@@ -29,6 +29,8 @@ func printUsage() {
       --shadow <0..1>    Drop-shadow opacity (default: 0.45; 0 = none)
       --cursor-scale <f> Cursor size multiplier (default: 1.5)
       --cursor-smooth <s> Cursor smoothing sigma in seconds (default: 0.08)
+      --cursor-hide <s>  Fade the cursor out after N seconds idle (default: 0.6)
+      --no-cursor-hide   Always show the cursor (do not fade when idle)
       --no-cursor        Don't draw a cursor (cursor-less recordings only)
       --no-click         Disable the click ripple effect
       --motion-blur <v>  Motion-blur strength during fast zoom (default: 0.5; 0 = off)
@@ -94,6 +96,8 @@ func runRender(_ args: [String]) {
     var cursorScale: Double = 1.5
     var cursorSmooth: Double = 0.08
     var drawCursor = true
+    var cursorHide = true
+    var cursorHideDelay: Double = 0.6
     var clickEffect = true
     var motionBlur: Double = 0.5
 
@@ -123,6 +127,11 @@ func runRender(_ args: [String]) {
             if i < args.count, let v = Double(args[i]) { cursorSmooth = v }
         case "--no-cursor":
             drawCursor = false
+        case "--no-cursor-hide":
+            cursorHide = false
+        case "--cursor-hide":
+            i += 1
+            if i < args.count, let v = Double(args[i]) { cursorHide = true; cursorHideDelay = v }
         case "--no-click":
             clickEffect = false
         case "--motion-blur":
@@ -169,6 +178,7 @@ func runRender(_ args: [String]) {
         let timeline = planner.plan(
             clicks: metadata.clicks,
             cursor: metadata.cursor,
+            keys: metadata.keys,
             screen: metadata.screen,
             duration: metadata.duration
         )
@@ -183,6 +193,8 @@ func runRender(_ args: [String]) {
             shadowRadius: w * 0.02,
             shadowOffset: w * 0.006,
             cursorScale: cursorScale,
+            cursorHide: cursorHide,
+            cursorHideDelay: cursorHideDelay,
             clickEffect: clickEffect,
             motionBlur: motionBlur
         )
@@ -194,8 +206,11 @@ func runRender(_ args: [String]) {
             cursor = SmoothedCursor(samples: smoothed)
         }
 
+        let activityNote = metadata.keys.isEmpty
+            ? "\(metadata.clicks.count) clicks"
+            : "\(metadata.clicks.count) clicks + \(metadata.keys.count) keypresses"
         let cursorNote = cursor != nil ? " + drawn cursor" : (metadata.cursorBaked ? " (cursor baked in)" : " (cursor off)")
-        print("Planned \(timeline.segments.count) zoom segment(s) from \(metadata.clicks.count) clicks\(cursorNote). Rendering…")
+        print("Planned \(timeline.segments.count) zoom segment(s) from \(activityNote)\(cursorNote). Rendering…")
 
         let renderer = VideoRenderer()
         let frames = try renderer.render(

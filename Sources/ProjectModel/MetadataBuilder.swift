@@ -30,6 +30,20 @@ public struct RawClick: Equatable, Sendable {
     }
 }
 
+/// A raw keypress as captured by the input tracker, before normalization.
+/// Records only timing and the cursor location at the moment of the press.
+public struct RawKey: Equatable, Sendable {
+    public var hostTime: Double
+    public var pointX: Double
+    public var pointY: Double
+
+    public init(hostTime: Double, pointX: Double, pointY: Double) {
+        self.hostTime = hostTime
+        self.pointX = pointX
+        self.pointY = pointY
+    }
+}
+
 /// Turns raw capture data into normalized `RecordingMetadata`.
 ///
 /// - Timestamps are made relative to `sessionStart` (the first video frame);
@@ -45,6 +59,7 @@ public enum MetadataBuilder {
         sessionEnd: Double,
         rawCursor: [RawCursorSample],
         rawClicks: [RawClick],
+        rawKeys: [RawKey] = [],
         cursorBaked: Bool = true
     ) -> RecordingMetadata {
         let duration = max(0, sessionEnd - sessionStart)
@@ -68,6 +83,15 @@ public enum MetadataBuilder {
             )
         }
 
+        let keys: [KeyEvent] = rawKeys.compactMap { key in
+            let t = key.hostTime - sessionStart
+            guard t >= 0 else { return nil }
+            return KeyEvent(
+                t: t,
+                position: Point(x: key.pointX * displayScale, y: key.pointY * displayScale)
+            )
+        }
+
         return RecordingMetadata(
             fps: fps,
             displayScale: displayScale,
@@ -75,6 +99,7 @@ public enum MetadataBuilder {
             duration: duration,
             cursor: cursor.sorted { $0.t < $1.t },
             clicks: clicks.sorted { $0.t < $1.t },
+            keys: keys.sorted { $0.t < $1.t },
             cursorBaked: cursorBaked
         )
     }

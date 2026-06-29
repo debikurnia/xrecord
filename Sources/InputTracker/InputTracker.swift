@@ -15,6 +15,7 @@ public final class InputTracker {
     private let lock = NSLock()
     private var cursorSamples: [RawCursorSample] = []
     private var clickEvents: [RawClick] = []
+    private var keyEvents: [RawKey] = []
 
     public init() {}
 
@@ -27,7 +28,8 @@ public final class InputTracker {
             (1 << CGEventType.leftMouseDragged.rawValue) |
             (1 << CGEventType.rightMouseDragged.rawValue) |
             (1 << CGEventType.leftMouseDown.rawValue) |
-            (1 << CGEventType.rightMouseDown.rawValue)
+            (1 << CGEventType.rightMouseDown.rawValue) |
+            (1 << CGEventType.keyDown.rawValue)
 
         let refcon = Unmanaged.passUnretained(self).toOpaque()
 
@@ -68,10 +70,10 @@ public final class InputTracker {
     }
 
     /// A thread-safe copy of everything captured so far.
-    public func snapshot() -> (cursor: [RawCursorSample], clicks: [RawClick]) {
+    public func snapshot() -> (cursor: [RawCursorSample], clicks: [RawClick], keys: [RawKey]) {
         lock.lock()
         defer { lock.unlock() }
-        return (cursorSamples, clickEvents)
+        return (cursorSamples, clickEvents, keyEvents)
     }
 
     private func handle(type: CGEventType, event: CGEvent) {
@@ -88,6 +90,10 @@ public final class InputTracker {
             clickEvents.append(RawClick(hostTime: t, pointX: Double(loc.x), pointY: Double(loc.y), button: .left))
         case .rightMouseDown:
             clickEvents.append(RawClick(hostTime: t, pointX: Double(loc.x), pointY: Double(loc.y), button: .right))
+        case .keyDown:
+            // Record only that a key was pressed and where the cursor was.
+            // The key code / character is deliberately never read.
+            keyEvents.append(RawKey(hostTime: t, pointX: Double(loc.x), pointY: Double(loc.y)))
         default:
             break
         }

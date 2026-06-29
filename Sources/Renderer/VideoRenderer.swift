@@ -50,6 +50,7 @@ public final class VideoRenderer {
         let cursor: SmoothedCursor?
         let cursorSprite: CIImage?
         let cursorHotspot: CGPoint
+        let cursorActivityTimes: [Double]
         // Click ripple
         let clicks: [ClickEvent]
         let rippleSprite: CIImage?
@@ -312,16 +313,27 @@ public final class VideoRenderer {
             }
         }
 
-        // Our own cursor (cursor-less recordings only).
+        // Our own cursor (cursor-less recordings only), fading out while idle.
         if let cursor = plan.cursor, let sprite = plan.cursorSprite, let pos = cursor.position(at: t) {
-            let ciCursor = CGPoint(x: pos.x, y: plan.screen.height - pos.y)
-            let inCanvas = ciCursor.applying(zoomTransform).applying(plan.placeTransform)
-            let tx = inCanvas.x - plan.cursorHotspot.x
-            let ty = inCanvas.y - plan.cursorHotspot.y
-            let placedCursor = sprite
-                .transformed(by: CGAffineTransform(translationX: tx, y: ty))
-                .cropped(to: plan.contentRectCI)
-            result = placedCursor.composited(over: result)
+            let alpha = plan.look.cursorHide
+                ? cursorIdleAlpha(at: t, activityTimes: plan.cursorActivityTimes,
+                                  idleDelay: plan.look.cursorHideDelay)
+                : 1.0
+            if alpha > 0.01 {
+                let ciCursor = CGPoint(x: pos.x, y: plan.screen.height - pos.y)
+                let inCanvas = ciCursor.applying(zoomTransform).applying(plan.placeTransform)
+                let tx = inCanvas.x - plan.cursorHotspot.x
+                let ty = inCanvas.y - plan.cursorHotspot.y
+                var placedCursor = sprite
+                    .transformed(by: CGAffineTransform(translationX: tx, y: ty))
+                    .cropped(to: plan.contentRectCI)
+                if alpha < 0.999 {
+                    placedCursor = placedCursor.applyingFilter("CIColorMatrix", parameters: [
+                        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: alpha),
+                    ])
+                }
+                result = placedCursor.composited(over: result)
+            }
         }
 
         return result.cropped(to: plan.canvasRect)
@@ -389,6 +401,13 @@ public final class VideoRenderer {
             cursorHotspot = sprite.hotspot
         }
 
+        // Times the cursor is "active": mouse-movement samples + clicks. Used to
+        // fade the cursor out while idle.
+        var activityTimes: [Double] = []
+        if let cursor { activityTimes += cursor.samples.map { $0.t } }
+        activityTimes += clicks.map { $0.t }
+        activityTimes.sort()
+
         var rippleSprite: CIImage?
         var rippleSpriteRadius = 0.0
         if look.clickEffect, !clicks.isEmpty, let ripple = makeRippleSprite() {
@@ -409,6 +428,7 @@ public final class VideoRenderer {
             cursor: cursor,
             cursorSprite: cursorSprite,
             cursorHotspot: cursorHotspot,
+            cursorActivityTimes: activityTimes,
             clicks: clicks,
             rippleSprite: rippleSprite,
             rippleSpriteRadius: rippleSpriteRadius,
