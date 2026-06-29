@@ -10,6 +10,7 @@ An open-source, native alternative to Screen Studio.
 ![macOS](https://img.shields.io/badge/macOS-13+-000000?style=for-the-badge&logo=apple&logoColor=white)
 ![Swift](https://img.shields.io/badge/Swift-6-F05138?style=for-the-badge&logo=swift&logoColor=white)
 ![ScreenCaptureKit](https://img.shields.io/badge/ScreenCaptureKit-native-7C3AED?style=for-the-badge)
+[![License: MIT](https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge)](LICENSE)
 ![Tests](https://img.shields.io/badge/tests-41%20passing-22C55E?style=for-the-badge)
 [![Made by Debi Kurnia](https://img.shields.io/badge/made%20by-Debi%20Kurnia-7C3AED?style=for-the-badge)](https://debikurnia.id)
 
@@ -139,6 +140,10 @@ make test     # 41 tests across 6 suites (Swift Testing)
 - Webcam overlay (picture-in-picture)
 - Manual zoom keyframes
 - SwiftUI timeline editor
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
