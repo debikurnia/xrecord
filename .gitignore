@@ -1,0 +1,13 @@
+.DS_Store
+/.build
+/.swiftpm
+/Packages
+xcuserdata/
+*.xcodeproj
+.netrc
+
+# Local screen recordings & renders (large media, not for VCS)
+recording-*/
+*.mov
+*.mp4
+*.gif
